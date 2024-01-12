@@ -105,3 +105,5 @@ commit;
 
 /* 1st user */
 /* signup again as a new user and select role as 'ngo' run below query */
+
+alter table users add column password_reset_token varchar(255) after password;
