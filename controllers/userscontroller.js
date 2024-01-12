@@ -299,7 +299,7 @@ const forgotUserPassword = ((req, res)=>{
         courier.send({
           message: {
             to: {
-              email: process.env.EMAIL_ID,
+              email: results[0].email,
             },
             template: "NZFCGY22PG4CT1NN783ACREQW80N",
             data: {
