@@ -2,6 +2,10 @@ const db = require('../models/db.js');
 const jwt = require("jsonwebtoken");
 const bcryptjs = require("bcryptjs");
 const { validationResult } = require("express-validator");
+const { randomInt } = require('crypto');
+const { CourierClient } = require("@trycourier/courier");
+require('dotenv').config();
+const courier = new CourierClient({ authorizationToken: process.env.EMAIL_API_TOKEN });
 
 // Get all Jobs
 const getAllJobs = ((req,res)=>{
@@ -238,6 +242,124 @@ const getUserById = ((req, res)=>{
     });
     });
 
+
+    // update password
+    const updateUserPassword = ((req, res)=>{
+      console.log('update pass values', req.body);
+      const { newPassword, passwordConfirmation, user_id } = req.body;
+      const saltRounds = 12;
+
+      db.query('SELECT u.user_id, u.email, u.password, u.first_name, u.last_name from users u WHERE u.user_id=? AND u.is_active=1', [user_id],function(err, results){
+        if(err) throw err;
+        if(results.length){
+            console.log('result', results[0]);
+
+            // password encryption 
+            bcryptjs
+            .hash(newPassword, saltRounds)
+            .then((hashedPw) => {
+              //change password for user and update password_reset_token to null
+              db.query('UPDATE users SET password = ?, password_reset_token = NULL  WHERE user_id = ? and email = ?', [hashedPw, results[0].user_id, results[0].email], (err) => {
+                res.status(200).json({
+                  message: "Password updated Successfuly!",
+                });
+              });
+              
+            })
+            .then((user) => {
+              //res.status(201).json({ message: "Registered Successfully!" });
+            })
+            .catch((err) => {
+              if (!err.statusCode) {
+                err.statusCode = 500;
+              }
+              next(err);
+            });
+            //
+        }
+        else{
+            res.json({
+                message: 'Unable to retrieve user!',
+            });
+        }
+    });
+    });
+
+// forgotUserPassword
+const forgotUserPassword = ((req, res)=>{
+  console.log('resetpass values', req.body);
+  const { email } = req.body;
+
+  db.query('SELECT u.user_id, u.email, u.password, u.first_name, u.last_name from users u WHERE u.email=? AND u.is_active=1', [email],function(err, results){
+    if(err) throw err;
+    if(results.length){
+        console.log('result', results[0]);
+        // send email with scret token
+        const token_text = randomInt(0, 10000).toString();
+        courier.send({
+          message: {
+            to: {
+              email: process.env.EMAIL_ID,
+            },
+            template: "NZFCGY22PG4CT1NN783ACREQW80N",
+            data: {
+              password_reset_code: token_text
+            },
+          },
+        });
+        
+        // update users table with encrypted secret token 
+        bcryptjs.hash(token_text, 12)
+        .then((secret_token)=>{
+          db.query('UPDATE users SET password_reset_token = ?  WHERE user_id = ? and email = ?', [secret_token, results[0].user_id, results[0].email], (err) => {
+            res.status(200).json({
+              message: `Secret token sent to ${results[0].first_name} ${results[0].last_name} successfully!`,
+              user_id: results[0].user_id
+            });
+          });
+        });
+    }
+    else{
+        res.json({
+            message: 'Unable to retrieve user!',
+        });
+    }
+});
+});
+    
+    
+
+    //validateToken
+    const validateToken = ((req, res)=>{
+      console.log('token values', req.body);
+      const { secret_token, user_id } = req.body;
+
+      db.query('SELECT u.user_id, u.email, u.password, u.first_name, u.last_name, u.password_reset_token from users u WHERE u.user_id=? AND u.is_active=1', [user_id],function(err, results){
+        if(err) throw err;
+        if(results.length){
+            console.log('user details', results[0]);
+            const user_id = results[0].user_id;
+            const isEqual = bcryptjs.compare(secret_token, results[0].password_reset_token);
+            if (!isEqual) {
+              const error = new Error("Incorrect secret token");
+              error.statusCode = 401;
+              throw error;
+            }
+            else{
+              res.status(200).json({
+                message: `Secret token verified successfully!`,
+                user_id: user_id
+              });
+            }
+        }
+        else{
+            res.json({
+                message: 'Unable to verify secret token!',
+            });
+        }
+    });
+    });
+
   module.exports = {
     getAllUsers,
     getUserById,
@@ -247,5 +369,8 @@ const getUserById = ((req, res)=>{
     userAuthentication,
     createNewUserRole,
     resetUserPassword,
-    getAllJobs
+    getAllJobs,
+    forgotUserPassword,
+    validateToken,
+    updateUserPassword
   };

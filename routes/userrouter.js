@@ -10,7 +10,10 @@ const {
     userAuthentication,
     createNewUserRole,
     resetUserPassword,
-    getAllJobs
+    getAllJobs,
+    forgotUserPassword,
+    validateToken,
+    updateUserPassword
 } = require('../controllers/userscontroller.js');
 
 router.get('/', getAllUsers);
@@ -22,5 +25,8 @@ router.delete('/:user_id', deleteExistingUser);
 router.post('/login', userAuthentication);
 router.post('/userroles', createNewUserRole);
 router.post('/resetpassword', resetUserPassword);
+router.post('/forgotpassword', forgotUserPassword);
+router.post('/validatetoken', validateToken);
+router.post('/updatepassword',updateUserPassword);
 
 module.exports = router;
