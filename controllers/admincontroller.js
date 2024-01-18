@@ -16,6 +16,7 @@ const getAdminDashboardStats = ((req, res) =>{
     const { user_id } = req.params;
     console.log('userId', user_id);
     const ngo_role_name = "ngo";
+    const admin_role_name = "admin";
     const cyber_security_role_name = "cyber_security_expert";
   
    // 1. fetch all job provider count - in this case NGO's
@@ -34,7 +35,7 @@ const getAdminDashboardStats = ((req, res) =>{
       console.log('jobCount', jobCount);
     });
     // 3. fetch all job seeker count
-    db.query('select count(1) as seeker_count FROM users u inner join userroles ur on u.user_id=ur.user_id inner join roles r on r.role_id=ur.role_id WHERE u.is_active=1', (err, result) => {
+    db.query('select count(1) as seeker_count FROM users u inner join userroles ur on u.user_id=ur.user_id inner join roles r on r.role_id=ur.role_id WHERE r.role_name <> ? and u.is_active=1', [admin_role_name], (err, result) => {
       if (err) throw err;
       console.log('result3', result);
       seekerCount = result[0].seeker_count;
