@@ -83,6 +83,7 @@ const getUserById = ((req, res)=>{
   const updateExistingUser = ((req, res)=>{
     const { user_id } = req.params;
     const { first_name, last_name, email } = req.body;
+    console.log("inside updateExistingUser");
     db.query('UPDATE users SET first_name = ?,last_name = ?, email = ? WHERE user_id = ?', [first_name,last_name, email, user_id], (err) => {
       if (err) throw err;
       res.json({ message: 'User updated successfully' });
